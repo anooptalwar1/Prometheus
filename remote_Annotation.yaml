@@ -1,0 +1,254 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: mysqldb
+  annotations:
+    prometheus.io/scrape: 'true'
+    prometheus.io/port: '9090'
+spec:
+  ports:
+  - port: 3306
+    targetPort: 3306
+  type: ClusterIP
+  selector:
+    app: mysqldb
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mysqldb
+spec:
+  selector:
+    matchLabels:
+      app: mysqldb
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: mysqldb
+      annotations:
+        prometheus.io/scrape: 'true'
+        prometheus.io/port: '9090'
+    spec:
+      containers:
+      - image: mysqldb:latest
+        imagePullPolicy: IfNotPresent
+        name: mysqldb
+        env:
+          # Use secret in real usage
+        - name: MYSQL_ROOT_PASSWORD
+          value: Passw0rd
+        ports:
+        - containerPort: 3306
+          name: mysqldb
+#        volumeMounts:
+#        - name: mysql-persistent-storage
+#          mountPath: /var/lib/mysql
+#      volumes:
+#      - name: mysql-persistent-storage
+#        persistentVolumeClaim:
+#          claimName: mysql-pv-claim
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    service: pmflask
+  name: pmflask
+  annotations:
+    prometheus.io/scrape: 'true'
+    prometheus.io/port: '9090'
+spec:
+  ports:
+  - port: 5010
+    targetPort: 5010
+  type: ClusterIP
+  externalIPs:
+  - 192.168.0.103 #Please change the external IP
+  selector:
+    app: pmflask
+    purpose: proceduremanagement
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pmflask
+spec:
+  selector:
+    matchLabels:
+      app: pmflask
+      purpose: proceduremanagement
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: pmflask
+        purpose: proceduremanagement
+      annotations:
+        prometheus.io/scrape: 'true'
+        prometheus.io/port: '9090'
+    spec:
+      containers:
+      - name: pmflask
+        image: pmflask
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 5010
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    service: umflask
+  name: umflask
+  annotations:
+    prometheus.io/scrape: 'true'
+    prometheus.io/port: '9090'
+spec:
+  ports:
+  - port: 5000
+    targetPort: 5000
+  type: ClusterIP
+  externalIPs:
+  - 192.168.0.103 #Please change the external IP
+  selector:
+    app: umflask
+    purpose: usermanagment
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: umflask
+spec:
+  selector:
+    matchLabels:
+      app: umflask
+      purpose: usermanagment
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: umflask
+        purpose: usermanagment
+      annotations:
+        prometheus.io/scrape: 'true'
+        prometheus.io/port: '9090'
+    spec:
+      containers:
+      - name: umflask
+        image: umflask
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 5000
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    service: filestore
+  name: filestore
+  annotations:
+    prometheus.io/scrape: 'true'
+    prometheus.io/port: '9090'
+spec:
+  ports:
+  - port: 5678
+    targetPort: 5678
+    protocol: TCP
+  type: ClusterIP
+  externalIPs:
+  - 192.168.0.103
+  selector:
+    app: filestore
+    purpose: storage
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: filestore
+spec:
+  selector:
+    matchLabels:
+      app: filestore
+      purpose: storage
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: filestore
+        purpose: storage
+      annotations:
+        prometheus.io/scrape: 'true'
+        prometheus.io/port: '9090'
+    spec:
+      containers:
+      - name: filestore
+        image: filestore
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 5678
+        volumeMounts:
+        - name: fsvol
+          mountPath: /app/uploads
+      volumes:
+      - name: fsvol
+        hostPath:
+          path: /home/altran/FS #change the path of storage
+          type: Directory
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    service: umangular
+  name: umangular
+  annotations:
+    prometheus.io/scrape: 'true'
+    prometheus.io/port: '9090'
+spec:
+  ports:
+  - port: 4200
+    targetPort: 4200
+  type: ClusterIP
+  externalIPs:
+  - 192.168.0.103 #Please change the external IP
+  selector:
+    app: umangular
+    purpose: cmsfrontend
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: umangular
+spec:
+  selector:
+    matchLabels:
+      app: umangular
+      purpose: cmsfrontend
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: umangular
+        purpose: cmsfrontend
+      annotations:
+        prometheus.io/scrape: 'true'
+        prometheus.io/port: '9090'
+    spec:
+      containers:
+      - name: umangular
+        image: umangular
+        imagePullPolicy: IfNotPresent
+#        env:
+#          # Use secret in real usage
+#        - name: API_URL
+#          value: 192.168.0.103
+        ports:
+        - containerPort: 4200
+
